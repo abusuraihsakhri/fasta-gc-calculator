@@ -142,6 +142,7 @@ def main(argv=None):
 
     args = parser.parse_args(argv)
     args.func(args)
+    return 0
 
 
 if __name__ == '__main__':

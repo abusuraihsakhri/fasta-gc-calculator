@@ -3,6 +3,7 @@
 import pytest
 from fasta_gc import (
     parse_fasta,
+    parse_fasta_file,
     gc_content,
     gc_content_detailed,
     sliding_window_gc,
@@ -263,6 +264,98 @@ class TestBatchProcessing:
         assert len(results) == 2
         assert csv_out.exists()
         assert 'gc_content' in results[0]
+
+
+# ---------------------------------------------------------------------------
+# Edge Case & Security Tests
+# ---------------------------------------------------------------------------
+
+class TestEdgeCases:
+    """Edge case tests for robustness."""
+
+    def test_gc_content_only_n(self):
+        """Sequence with only N bases should return 0.0."""
+        assert gc_content('NNNNNN') == 0.0
+
+    def test_gc_content_mixed_case(self):
+        """Mixed case should be handled correctly."""
+        assert gc_content('atcgATCG') == 50.0
+
+    def test_gc_content_with_ambiguous_bases(self):
+        """Ambiguous bases (not A/T/G/C/N) should be excluded."""
+        # R = A or G, but not counted in our implementation
+        result = gc_content('ATCGR')
+        # A=1, T=1, C=1, G=1, total=4 -> GC = 2/4 * 100 = 50.0
+        assert result == 50.0
+
+    def test_parse_fasta_no_header(self):
+        """FASTA with no header should return empty list."""
+        seqs = parse_fasta('ATCGATCG')
+        assert len(seqs) == 0
+
+    def test_parse_fasta_empty_sequence(self):
+        """FASTA with empty sequence should still parse."""
+        seqs = parse_fasta('>seq1\n')
+        assert len(seqs) == 1
+        assert seqs[0]['sequence'] == ''
+
+    def test_sliding_window_exact_fit(self):
+        """Sliding window when sequence length equals window size."""
+        seq = 'ATCG' * 25  # 100bp
+        windows = sliding_window_gc(seq, window_size=100, step=100)
+        assert len(windows) == 1
+
+    def test_cpg_no_c_or_g(self):
+        """CpG analysis with no C or G should return 0.0 ratio."""
+        result = cpg_observed_expected('AATTAA')
+        assert result['cpg_oe_ratio'] == 0.0
+
+    def test_masked_empty_sequence(self):
+        """Masked analysis with empty sequence should not divide by zero."""
+        result = masked_vs_unmasked('')
+        assert result['masked_fraction'] == 0.0
+
+    def test_n50_single_element(self):
+        """N50 with single element returns that element."""
+        assert calculate_n50([42]) == 42
+
+    def test_assembly_stats_single_sequence(self):
+        """Assembly stats with single sequence."""
+        seqs = [{'header': 'test', 'sequence': 'ATCG'}]
+        stats = assembly_stats(seqs)
+        assert stats['num_sequences'] == 1
+        assert stats['n50'] == 4
+
+    def test_gc_content_very_long_sequence(self):
+        """GC content works with very long sequences."""
+        seq = 'ATCG' * 10000
+        result = gc_content(seq)
+        assert result == 50.0
+
+
+class TestInputValidation:
+    """Tests for input validation and error handling."""
+
+    def test_parse_fasta_file_not_found(self):
+        """parse_fasta_file raises FileNotFoundError for missing file."""
+        with pytest.raises(FileNotFoundError):
+            parse_fasta_file('/nonexistent/path/file.fasta')
+
+    def test_batch_csv_missing_sequence_column(self):
+        """Batch processing handles missing sequence column gracefully."""
+        import tempfile
+        import os
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write('header,data\nseq1,ATCG\n')
+            tmp_path = f.name
+        try:
+            # Should use empty string for missing 'sequence' column
+            results = process_batch(tmp_path, tmp_path + '.out.csv')
+            assert len(results) == 1
+        finally:
+            os.unlink(tmp_path)
+            if os.path.exists(tmp_path + '.out.csv'):
+                os.unlink(tmp_path + '.out.csv')
 
 
 if __name__ == '__main__':

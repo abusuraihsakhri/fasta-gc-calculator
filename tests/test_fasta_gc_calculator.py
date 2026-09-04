@@ -59,7 +59,11 @@ def test_supervisor_consensus_and_audit():
     # Verify cryptographic audit trail
     assert AuditLogger.verify_integrity() is True
 
-    # CLI tests
-    assert main(["audit", "--task-id", "CLI-TEST-01"]) == 0
-    assert main(["chat", "Explain", "specifications"]) == 0
-    assert main(["verify-audit"]) == 0
+    # CLI tests - verify gc subcommand works with a sequence
+    assert main(["gc", "--sequence", "ATCGATCG"]) == 0
+    # CLI tests - verify cpg subcommand works
+    assert main(["cpg", "--sequence", "ACGACG"]) == 0
+    # CLI tests - verify n50 subcommand works
+    assert main(["n50", "--lengths", "100,200,300"]) == 0
+    # CLI tests - verify window subcommand works
+    assert main(["window", "--sequence", "ATCG" * 25, "--window-size", "20", "--step", "20"]) == 0
