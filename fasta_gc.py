@@ -173,7 +173,7 @@ def cpg_observed_expected(sequence: str) -> Dict[str, Any]:
 
     gc = gc_content(seq)
 
-    is_cpg_island = cpg_oe > 0.6 and gc > 50.0 and length > 200
+    is_cpg_island = cpg_oe > 0.6 and gc > 50.0 and canonical_length > 200
 
     return {
         'length': length,
