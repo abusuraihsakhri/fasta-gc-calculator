@@ -39,5 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$PAGE_URL"
-          curl -fsSL --retry 8 --retry-all-errors --retry-delay 5 "$PAGE_URL" | grep -q "FASTA GC Calculator"
-          curl -fsSL --retry 8 --retry-all-errors --retry-delay 5 "${PAGE_URL%/}/web/calculator.mjs" | grep -q "export function parseFasta"
+          curl -fsSL --retry 8 --retry-all-errors --retry-delay 5 -o /tmp/fasta-site.html "$PAGE_URL"
+          grep -q "FASTA GC Calculator" /tmp/fasta-site.html
+          curl -fsSL --retry 8 --retry-all-errors --retry-delay 5 -o /tmp/fasta-calculator.mjs "${PAGE_URL%/}/web/calculator.mjs"
+          grep -q "export function parseFasta" /tmp/fasta-calculator.mjs
