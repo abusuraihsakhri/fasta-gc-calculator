@@ -64,7 +64,7 @@ export function analyzeSequence(record) {
     header: record.header, length: seq.length, ...counts, canonical,
     gcPercent, cpg, cpgOE, masked,
     maskedPercent: seq.length ? 100 * masked / seq.length : 0,
-    isCpgIsland: seq.length > 200 && gcPercent > 50 && cpgOE > 0.6
+    isCpgIsland: canonical > 200 && gcPercent > 50 && cpgOE > 0.6
   };
 }
 
