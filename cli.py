@@ -33,6 +33,8 @@ def cmd_gc(args):
     """Calculate GC content."""
     if args.file:
         result = analyze_fasta(args.file)
+        if 'error' in result:
+            raise ValueError(result['error'])
         print(json.dumps(result['assembly'], indent=2))
     elif args.sequence:
         result = gc_content_detailed(args.sequence)
@@ -40,10 +42,11 @@ def cmd_gc(args):
     else:
         # Read from stdin
         seq = sys.stdin.read().strip()
-        lines = seq.split('\n')
-        seq = ''.join(l.strip() for l in lines if not l.startswith('>'))
-        result = gc_content_detailed(seq)
-        print(json.dumps(result, indent=2))
+        if seq.startswith('>'):
+            sequences = parse_fasta(seq)
+            print(json.dumps(assembly_stats(sequences), indent=2))
+        else:
+            print(json.dumps(gc_content_detailed(seq), indent=2))
 
 
 def cmd_cpg(args):
@@ -60,6 +63,8 @@ def cmd_cpg(args):
     elif args.sequence:
         result = cpg_observed_expected(args.sequence)
         print(json.dumps(result, indent=2))
+    else:
+        raise ValueError('Provide --file or --sequence')
 
 
 def cmd_window(args):
@@ -141,9 +146,13 @@ def main(argv=None):
     p_batch.set_defaults(func=cmd_batch)
 
     args = parser.parse_args(argv)
-    args.func(args)
+    try:
+        args.func(args)
+    except (ValueError, OSError) as exc:
+        print(f'Error: {exc}', file=sys.stderr)
+        return 2
     return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
