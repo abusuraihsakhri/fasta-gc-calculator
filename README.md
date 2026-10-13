@@ -1,5 +1,7 @@
 # FASTA GC Calculator
 
+### [Open the Live Application →](https://abusuraihsakhri.github.io/fasta-gc-calculator/)
+
 A sequence-analysis tool for DNA FASTA files. Use the browser interface without installing anything, or run the Python command-line interface locally.
 
 ## Browser application
