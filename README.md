@@ -1,211 +1,74 @@
-# FASTA GC Content Calculator
+# FASTA GC Calculator
 
-> **Domain:** Bioinformatics & Genomic Sequence Analysis
+A sequence-analysis tool for DNA FASTA files. Use the browser interface without installing anything, or run the Python command-line interface locally.
 
-<div align="center">
+## Browser application
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
+The repository includes a static calculator in `index.html` and `web/index.html`. It accepts pasted DNA sequences and FASTA files, displays assembly and per-sequence statistics, plots GC% in sliding windows, and exports a CSV table.
 
-</div>
+**Privacy:** Browser analysis runs entirely on your device, using JavaScript modules. Input sequences are not uploaded to a server. There is no remote API call or persistent browser storage in the calculator. Do not upload sensitive samples to a third-party instance of the optional API.
 
----
+## Calculations
 
-## Overview
+- **GC content:** `(G + C) / (A + T + G + C) × 100`. Ambiguous bases and N are excluded. A record without canonical bases reports 0%.
+- **CpG observed/expected:** `CpG × canonical_base_count / (C × G)`. If C or G is absent, the ratio is zero. The CpG-island flag uses the illustrative heuristic GC > 50%, CpG O/E > 0.6, and more than 200 canonical bp; **it is not a validated CpG island caller**.
+- **N50:** The contig length at which the cumulative sorted assembly length first reaches at least half the total bp count.
+- **Masking:** Lowercase input bases are treated as soft-masked. Case is retained when parsing FASTA.
+- **Sliding windows:** Configurable window width and step. In the browser, at most the first 300 windows of the longest sequence are displayed; the Python whole-file analysis returns at most the first 20 windows.
+- **Dinucleotides:** Python counts the 16 canonical DNA dinucleotides, excluding ambiguous pairs.
 
-FASTA GC Content Calculator is a Python tool for analyzing DNA sequences in FASTA format. It computes GC content, sliding window GC distribution, CpG observed/expected ratio, dinucleotide frequencies, N50 calculation, and masked vs unmasked content.
+## Command-line usage
 
-**Zero external dependencies for core functionality** — uses Python stdlib only. Optional `pydantic` dependency for the enterprise agent framework.
-
----
-
-## Features
-
-### Core Analysis Functions
-
-- **`parse_fasta()`**: Parse FASTA format text into list of `{header, sequence}` dicts. Supports multi-sequence files and concatenates multi-line sequences.
-- **`parse_fasta_file()`**: Parse a FASTA file from disk.
-- **`gc_content()`**: Calculate GC content: `(G+C) / (A+T+G+C) × 100`, excluding N and ambiguous bases. Returns percentage (0-100).
-- **`gc_content_detailed()`**: Detailed GC content analysis with base counts.
-- **`sliding_window_gc()`**: Calculate GC content in sliding windows across a sequence.
-- **`cpg_observed_expected()`**: Calculate CpG observed/expected ratio and detect CpG islands.
-- **`dinucleotide_frequencies()`**: Count all 16 dinucleotide frequencies.
-- **`masked_vs_unmasked()`**: Analyze soft-masked (lowercase) vs unmasked (uppercase) content.
-- **`calculate_n50()`**: Calculate N50 from a list of sequence lengths.
-- **`assembly_stats()`**: Calculate assembly statistics including N50.
-- **`analyze_fasta()`**: Complete analysis of a FASTA file.
-- **`process_batch()`**: Batch process sequences from CSV.
-
----
-
-## Installation
+Core calculation functions use **Python 3.10+** with no additional packages.
 
 ```bash
-# Clone the repository
-git clone https://github.com/abusuraihsakhri/fasta-gc-calculator.git
-cd fasta-gc-calculator
-
-# No installation required for core functionality (Python 3.10+ stdlib only)
-# For the agent framework, install optional dependencies:
-pip install pydantic
-```
-
----
-
-## Usage
-
-### CLI Commands
-
-#### GC Content Analysis
-```bash
-# Analyze a sequence directly
 python cli.py gc --sequence ATCGATCG
-
-# Analyze a FASTA file
 python cli.py gc --file sequences.fasta
-
-# Read from stdin
-echo ">seq1\nATCGATCG" | python cli.py gc
-```
-
-#### CpG Analysis
-```bash
-# Analyze CpG observed/expected ratio
-python cli.py cpg --sequence ACGACG
-
-# Analyze a FASTA file
 python cli.py cpg --file sequences.fasta
-```
-
-#### Sliding Window GC
-```bash
-# Analyze GC distribution in sliding windows
-python cli.py window --sequence ATCGATCGATCG --window-size 50 --step 10
-
-# Analyze from file
-python cli.py window --file sequences.fasta --window-size 100 --step 20
-```
-
-#### N50 Calculation
-```bash
-# Calculate N50 from comma-separated lengths
-python cli.py n50 --lengths 100,200,300,400
-
-# Calculate N50 from FASTA file
-python cli.py n50 --file sequences.fasta
-```
-
-#### Batch Processing
-```bash
-# Process sequences from CSV (requires 'sequence' or 'seq' column)
+python cli.py window --sequence ATCGATCGATCG --window-size 4 --step 2
+python cli.py n50 --lengths 100,200,300
 python cli.py batch --input sequences.csv --output results.csv
 ```
 
-### Python API
+Batch CSV files may contain a `sequence` or `seq` column and optional metadata columns; the output appends GC, length, CpG count, and CpG ratio. Spreadsheet formula-like cells are escaped in the generated CSV. FASTA headers can include spaces and descriptions.
+
+Python use:
+
 ```python
-from fasta_gc import parse_fasta, gc_content, calculate_n50
+from fasta_gc import parse_fasta, gc_content, assembly_stats
 
-# Parse FASTA text
-sequences = parse_fasta(">seq1\nATCGATCG\n>seq2\nGGCCAA\n")
-
-# Calculate GC content
-gc = gc_content("ATCGATCG")  # Returns 50.0
-
-# Calculate N50
-n50 = calculate_n50([100, 200, 300, 400])  # Returns 300
+records = parse_fasta(">record1\nATCGnn\n>record2\nggcctt\n")
+print(gc_content(records[0]["sequence"]))
+print(assembly_stats(records))
 ```
-
----
-
-## Input Formats
-
-### FASTA Format
-```
->sequence_id Optional description
-ATCGATCGATCGATCGATCG
-ATCGATCGATCGATCGATCG
->another_sequence
-GGCCGGCCGGCC
-```
-
-### Batch CSV Format
-```csv
-header,sequence
-seq1,ATCGATCG
-seq2,GGCCGGCC
-```
-
----
 
 ## Testing
 
 ```bash
-# Run all tests
-pytest -v
-
-# Run specific test files
-pytest test_fasta_gc.py -v
-pytest tests/test_fasta_gc_calculator.py -v
-pytest tests/test_enrichment.py -v
-
-# Run with coverage
-pytest --cov=fasta_gc --cov=cli --cov=agents tests/ -v
+python -m pip install pytest "pydantic>=2,<3" "fastapi>=0.110,<1" "uvicorn>=0.30,<1"
+python -m pytest -q
+python -m compileall -q .
+node --test web/calculator.test.mjs
 ```
 
----
+The browser tests require Node.js 22+. GitHub Actions checks Python 3.10, 3.11 and 3.12 plus the browser module and entry-point scripts.
 
-## Project Structure
+## Optional API and Docker
 
-```
-fasta-gc-calculator/
-├── fasta_gc.py           # Core FASTA analysis functions
-├── cli.py                # Command-line interface
-├── test_fasta_gc.py      # Core functionality tests (36 tests)
-├── enrichment.py         # Enrichment feature engines
-├── simulator.py          # Throughput simulation
-├── agents/               # Enterprise agent framework
-│   ├── base.py           # Security, PHI guard, audit trail
-│   ├── models.py         # Pydantic data models
-│   ├── supervisor.py     # Multi-agent orchestrator
-│   ├── workers.py        # Specialized analysis workers
-│   ├── api.py            # FastAPI REST endpoints
-│   ├── metrics.py        # Prometheus metrics
-│   ├── learning.py       # Bayesian calibration engine
-│   ├── llm_factory.py    # LLM provider abstraction
-│   └── streamer.py       # WebSocket telemetry
-├── tests/                # Test directory
-│   ├── test_fasta_gc_calculator.py
-│   └── test_enrichment.py
-├── web/index.html        # Operations console UI
-├── Dockerfile            # Container build
-├── docker-compose.yml    # Container orchestration
-├── benchmark_dataset.json # Golden benchmark test cases
-└── sample.csv            # Sample batch input
-```
-
----
-
-## Security Features
-
-- **Zero-PHI Outbound Guard:** Regex-based detection and blocking of SSNs, MRNs, phone numbers, emails, and patient identifiers in outbound data.
-- **HMAC-SHA256 Audit Trail:** Cryptographic chained audit log for tamper-evident record keeping.
-- **Docker Secrets:** Audit secret key configurable via environment variable (not hardcoded).
-
----
-
-## Container Deployment
+The `agents/` package contains a separate demo audit/supervisor API based on FastAPI and Pydantic. It is **not required** for the FASTA calculator, and its general-purpose thresholds are not genomic interpretation rules or validated clinical decision support. The regex-based identifier guard is not a comprehensive PHI detector. Audit chains are stored in memory; specify `AUDIT_SECRET_KEY` for a consistent deployment-specific HMAC key.
 
 ```bash
-# Build and run with Docker
 docker build -t fasta-gc-calculator .
-docker run -e AUDIT_SECRET_KEY=$(openssl rand -hex 32) fasta-gc-calculator gc --sequence ATCG
-
-# Or use docker-compose
-AUDIT_SECRET_KEY=$(openssl rand -hex 32) docker-compose up
+docker run --rm fasta-gc-calculator gc --sequence ATCG
+# Optional API, hosted locally on port 8000:
+docker compose up --build
+# Then open http://localhost:8000/docs
 ```
 
----
+## Technology and compatibility
+
+Python standard library for analysis, HTML/CSS and native JavaScript ES modules for the browser, and optional FastAPI/Pydantic/Uvicorn for the auxiliary API. Modern Chrome, Firefox, Edge and Safari browsers with ES module support are expected to work. No Pyodide/PyScript runtime is needed for the web calculator.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+[MIT](LICENSE).

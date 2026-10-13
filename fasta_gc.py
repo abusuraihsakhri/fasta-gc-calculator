@@ -36,7 +36,7 @@ def parse_fasta(text: str) -> List[Dict[str, str]]:
             if current_header is not None:
                 sequences.append({
                     'header': current_header,
-                    'sequence': ''.join(current_seq).upper(),
+                    'sequence': ''.join(current_seq),
                 })
             current_header = line[1:].strip()
             current_seq = []
@@ -47,7 +47,7 @@ def parse_fasta(text: str) -> List[Dict[str, str]]:
     if current_header is not None:
         sequences.append({
             'header': current_header,
-            'sequence': ''.join(current_seq).upper(),
+            'sequence': ''.join(current_seq),
         })
 
     return sequences
@@ -55,7 +55,7 @@ def parse_fasta(text: str) -> List[Dict[str, str]]:
 
 def parse_fasta_file(filepath: str) -> List[Dict[str, str]]:
     """Parse a FASTA file from disk."""
-    with open(filepath, 'r') as f:
+    with open(filepath, 'r', encoding='utf-8-sig') as f:
         return parse_fasta(f.read())
 
 
@@ -106,7 +106,7 @@ def gc_content_detailed(sequence: str) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def sliding_window_gc(sequence: str, window_size: int = 100,
-                       step: int = 10) -> List[Dict[str, Any]]:
+                       step: int = 10, max_windows: Optional[int] = None) -> List[Dict[str, Any]]:
     """Calculate GC content in sliding windows across a sequence.
 
     Args:
@@ -117,10 +117,16 @@ def sliding_window_gc(sequence: str, window_size: int = 100,
     Returns:
         List of dicts with position, gc_content, window_size.
     """
+    if window_size <= 0 or step <= 0:
+        raise ValueError('window_size and step must be positive integers')
+    if max_windows is not None and max_windows < 0:
+        raise ValueError('max_windows must be nonnegative')
     seq = sequence.upper()
     results = []
 
     for start in range(0, len(seq) - window_size + 1, step):
+        if max_windows is not None and len(results) >= max_windows:
+            break
         window = seq[start:start + window_size]
         gc = gc_content(window)
         results.append({
@@ -140,7 +146,8 @@ def sliding_window_gc(sequence: str, window_size: int = 100,
 def cpg_observed_expected(sequence: str) -> Dict[str, Any]:
     """Calculate CpG observed/expected ratio.
 
-    CpG_OE = (CpG_count × len) / (C_count × G_count)
+    CpG_OE = (CpG_count × canonical_base_count) / (C_count × G_count)
+    Ambiguous bases are excluded from the normalization denominator.
 
     CpG islands: CpG_OE > 0.6, GC > 50%, length > 200bp.
     """
@@ -156,15 +163,17 @@ def cpg_observed_expected(sequence: str) -> Dict[str, Any]:
         if seq[i] == 'C' and seq[i + 1] == 'G':
             cpg_count += 1
 
+    # Exclude ambiguous symbols from the CpG normalization denominator.
+    canonical_length = sum(seq.count(base) for base in 'ATGC')
     # Calculate observed/expected
     if c_count == 0 or g_count == 0:
         cpg_oe = 0.0
     else:
-        cpg_oe = (cpg_count * length) / (c_count * g_count)
+        cpg_oe = (cpg_count * canonical_length) / (c_count * g_count)
 
     gc = gc_content(seq)
 
-    is_cpg_island = cpg_oe > 0.6 and gc > 50.0 and length > 200
+    is_cpg_island = cpg_oe > 0.6 and gc > 50.0 and canonical_length > 200
 
     return {
         'length': length,
@@ -245,7 +254,9 @@ def calculate_n50(lengths: List[int]) -> int:
     N50 is the length such that sequences of this length or longer cover
     at least 50% of the total assembly length.
     """
-    if not lengths:
+    if any(not isinstance(length, int) or length < 0 for length in lengths):
+        raise ValueError('sequence lengths must be nonnegative integers')
+    if not lengths or not any(lengths):
         return 0
 
     sorted_lengths = sorted(lengths, reverse=True)
@@ -269,11 +280,10 @@ def assembly_stats(sequences: List[Dict[str, str]]) -> Dict[str, Any]:
         return {'num_sequences': 0, 'total_length': 0, 'n50': 0}
 
     n50 = calculate_n50(lengths)
-    gc_vals = [gc_content(s['sequence']) for s in sequences]
-    weighted_gc = sum(len(s['sequence']) * gc_content(s['sequence'])
-                      for s in sequences)
+    total_gc = sum(s['sequence'].upper().count(base) for s in sequences for base in 'GC')
+    canonical_length = sum(s['sequence'].upper().count(base) for s in sequences for base in 'ATGC')
     total_len = sum(lengths)
-    avg_gc = weighted_gc / total_len if total_len > 0 else 0.0
+    avg_gc = (total_gc / canonical_length * 100) if canonical_length else 0.0
 
     return {
         'num_sequences': len(sequences),
@@ -334,7 +344,7 @@ def analyze_fasta(filepath: str, window_size: int = 100,
 
     # Sliding window on longest sequence
     longest = max(sequences, key=lambda s: len(s['sequence']))
-    windows = sliding_window_gc(longest['sequence'], window_size, step)
+    windows = sliding_window_gc(longest['sequence'], window_size, step, max_windows=20)
 
     # Masked/unmasked analysis
     masked = masked_vs_unmasked(longest['sequence'])
@@ -343,7 +353,7 @@ def analyze_fasta(filepath: str, window_size: int = 100,
         'assembly': assembly,
         'per_sequence': per_seq,
         'dinucleotide_frequencies': all_dinucs,
-        'sliding_window': windows[:20],  # First 20 windows
+        'sliding_window': windows,  # First 20 windows, without materializing the rest
         'masked_analysis': masked,
     }
 
@@ -351,6 +361,13 @@ def analyze_fasta(filepath: str, window_size: int = 100,
 # ---------------------------------------------------------------------------
 # Batch Processing
 # ---------------------------------------------------------------------------
+
+def _safe_csv_cell(value: Any) -> Any:
+    """Prevent spreadsheet formula evaluation when the output is opened in Excel."""
+    if isinstance(value, str) and value.lstrip().startswith(('=', '+', '-', '@', '\t', '\r')):
+        return "'" + value
+    return value
+
 
 def process_batch(input_csv: str, output_csv: str) -> List[Dict[str, Any]]:
     """Process a CSV of sequences and calculate GC content.
@@ -362,11 +379,11 @@ def process_batch(input_csv: str, output_csv: str) -> List[Dict[str, Any]]:
         fieldnames = list(reader.fieldnames or [])
         rows = list(reader)
 
-    out_fields = fieldnames + ['gc_content', 'length', 'cpg_count', 'cpg_oe_ratio']
+    out_fields = list(dict.fromkeys(fieldnames + ['gc_content', 'length', 'cpg_count', 'cpg_oe_ratio']))
     out_rows = []
 
     for r in rows:
-        seq = r.get('sequence', r.get('seq', ''))
+        seq = r.get('sequence') or r.get('seq') or ''
         detail = gc_content_detailed(seq)
         cpg = cpg_observed_expected(seq)
 
@@ -380,6 +397,9 @@ def process_batch(input_csv: str, output_csv: str) -> List[Dict[str, Any]]:
     with open(output_csv, mode='w', encoding='utf-8', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=out_fields)
         writer.writeheader()
-        writer.writerows(out_rows)
+        # Escape spreadsheet formula prefixes in untrusted CSV fields.
+        # Keep the returned Python values unchanged for programmatic consumers.
+        for row in out_rows:
+            writer.writerow({k: _safe_csv_cell(v) for k, v in row.items()})
 
     return out_rows
