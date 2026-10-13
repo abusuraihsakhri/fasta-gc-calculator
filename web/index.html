@@ -1,236 +1,205 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fasta Gc Calculator — Operations Console</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #090d16;
-            --card: #111827;
-            --border: #1f293d;
-            --accent: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.25);
-            --text: #f3f4f6;
-            --text-muted: #9ca3af;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding: 2rem;
-            min-height: 100vh;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .header-title h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
-        .header-title p { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem; }
-        .badge {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: var(--accent-glow);
-            color: var(--accent);
-            border: 1px solid var(--accent);
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr;
-            gap: 1.5rem;
-        }
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
-        .card h2 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .form-group { margin-bottom: 1rem; }
-        label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; }
-        input, select, textarea {
-            width: 100%;
-            padding: 0.65rem 0.9rem;
-            background: #0d1322;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: #fff;
-            font-family: inherit;
-            font-size: 0.9rem;
-        }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
-        .btn {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 0.7rem 1.4rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            width: 100%;
-        }
-        .btn:hover { background: #2563eb; }
-        .terminal {
-            background: #060911;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: #10b981;
-            height: 380px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
-        .metrics-bar {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .metric-box {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-        }
-        .metric-val { font-size: 1.4rem; font-weight: 700; color: #fff; margin-top: 0.25rem; }
-        .metric-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Client-side FASTA sequence GC, CpG, N50 and masking calculator.">
+  <meta name="theme-color" content="#111b2e">
+  <title>FASTA GC Calculator</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0c1423;--panel:#152238;--border:#314158;--text:#ebf3ff;--muted:#afc1d4;--accent:#6fcdbd;--focus:#a8e4ff}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    .wrap{width:min(1160px,calc(100% - 32px));margin:0 auto}
+    header{padding:32px 0 20px;border-bottom:1px solid var(--border)}
+    h1{font-size:clamp(1.6rem,3vw,2.35rem);line-height:1.2;letter-spacing:-.03em;margin:0 0 10px}
+    h2{font-size:1.08rem;letter-spacing:-.01em;margin:0 0 14px}
+    p{margin:0 0 14px}
+    .lede,.muted{color:var(--muted)}
+    main{padding:26px 0 42px}
+    .layout{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:18px;align-items:start}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px;min-width:0}
+    label{font-weight:600;font-size:.92rem;display:block;margin-bottom:6px}
+    textarea,input[type=number],input[type=file]{width:100%;background:#0d192b;color:var(--text);border:1px solid #50647d;border-radius:7px;padding:10px;font:inherit}
+    textarea{min-height:185px;resize:vertical;font:14px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}
+    textarea:focus-visible,input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+    .hint{font-size:.84rem;color:var(--muted);margin:6px 0 15px}
+    .params{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+    button{border:1px solid var(--border);background:#233850;color:var(--text);border-radius:7px;padding:10px 15px;font:600 .91rem system-ui;cursor:pointer}
+    button.primary{background:var(--accent);color:#05282c;border-color:var(--accent)}
+    button:hover{filter:brightness(1.12)}
+    button:disabled{cursor:not-allowed;opacity:.5}
+    #error{color:#ffc4bd;min-height:1.4rem;margin-top:12px}
+    .stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .stat{padding:14px;background:#0e1b2e;border:1px solid var(--border);border-radius:8px}
+    .stat strong{font-size:1.52rem;display:block;font-variant-numeric:tabular-nums;color:var(--accent)}
+    .stat span{font-size:.82rem;color:var(--muted)}
+    .note{padding:12px;background:#101e31;border-left:3px solid var(--accent);font-size:.87rem;color:var(--muted);margin-top:16px}
+    .results{margin-top:18px;display:grid;gap:18px}
+    [hidden]{display:none!important}
+    .wide{overflow:auto}
+    table{width:100%;border-collapse:collapse;font-size:.9rem}
+    th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+    th{color:var(--muted);font-weight:600;background:#112037}
+    td:first-child{max-width:320px;overflow:hidden;text-overflow:ellipsis}
+    .plot{width:100%;height:150px;display:block;background:#0d1a2b;border:1px solid var(--border);border-radius:7px}
+    footer{padding:22px 0;border-top:1px solid var(--border);font-size:.83rem;color:var(--muted)}
+    a{color:#a3ecdf}
+    @media(max-width:780px){.layout{grid-template-columns:1fr}.card{padding:18px}header{padding-top:23px}}
+    @media(max-width:420px){.params{grid-template-columns:1fr}.actions button{flex:1}}
+  </style>
 </head>
 <body>
-
-    <div class="header">
-        <div class="header-title">
-            <h1>Fasta Gc Calculator</h1>
-            <p>Domain: Clinical & Cryptographic AI | Standard: CAP / CLSI / NIST Standards | LabMind-Atlas Architecture</p>
-        </div>
-        <div>
-            <span class="badge">Air-Gapped Active</span>
-            <span class="badge" style="background: rgba(16,185,129,0.2); color: #10b981; border-color: #10b981;">Zero-PHI Guard Active</span>
-        </div>
-    </div>
-
-    <div class="metrics-bar">
-        <div class="metric-box">
-            <div class="metric-label">System Status</div>
-            <div class="metric-val" style="color: var(--success);" id="m-status">OPTIMAL</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Tasks Processed</div>
-            <div class="metric-val" id="m-tasks">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Audit Blocks Signed</div>
-            <div class="metric-val" id="m-audit">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">PHI Interceptions</div>
-            <div class="metric-val" style="color: var(--accent);" id="m-phi">0</div>
-        </div>
-    </div>
-
-    <div class="grid">
-        <div class="card">
-            <h2>⚙️ Dispatch Distributed Component Audit</h2>
-            <div class="form-group">
-                <label>Task / Sample ID</label>
-                <input type="text" id="task_id" value="TASK-2026-LIVE-01">
-            </div>
-            <div class="form-group">
-                <label>Target Identifier</label>
-                <input type="text" id="target_id" value="SPECIMEN-ALPHA-77">
-            </div>
-            <div class="form-group">
-                <label>Primary Measurement / Value</label>
-                <input type="number" id="primary_metric" value="29.4" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Secondary Metric / Kinetic Index</label>
-                <input type="number" id="secondary_metric" value="14.8" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Status / Phenotype Descriptor</label>
-                <input type="text" id="status_descriptor" value="DISCORDANT_ANOMALY">
-            </div>
-            <div class="form-group">
-                <label><input type="checkbox" id="is_critical" checked> Trigger Emergency / Critical Flag</label>
-            </div>
-            <button class="btn" onclick="runAudit()">Execute Distributed Component Audit</button>
-        </div>
-
-        <div class="card">
-            <h2>📊 Real-Time Consensus Dossier & Audit Log</h2>
-            <div class="terminal" id="outputConsole">// Fasta Gc Calculator Operations Console Ready
-// Connection established with Air-Gapped Supervisor
-// Cryptographic HMAC-SHA256 audit ledger loaded.
-// Ready for live task payload dispatch...</div>
-        </div>
-    </div>
-
-    <script>
-        async function runAudit() {
-            const consoleEl = document.getElementById('outputConsole');
-            consoleEl.innerText = "// Dispatching task across specialized workers...
-// Invoking InvariantQCWorker, SafetyEscalationWorker, ProtocolWorker...";
-
-            const payload = {
-                task_id: document.getElementById('task_id').value,
-                target_identifier: document.getElementById('target_id').value,
-                primary_metric: parseFloat(document.getElementById('primary_metric').value),
-                secondary_metric: parseFloat(document.getElementById('secondary_metric').value),
-                status_descriptor: document.getElementById('status_descriptor').value,
-                is_critical_flag: document.getElementById('is_critical').checked
-            };
-
-            try {
-                const res = await fetch('/api/audit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                consoleEl.innerText = JSON.stringify(data, null, 2);
-                document.getElementById('m-tasks').innerText = parseInt(document.getElementById('m-tasks').innerText) + 1;
-                document.getElementById('m-audit').innerText = parseInt(document.getElementById('m-audit').innerText) + 1;
-            } catch (err) {
-                consoleEl.innerText = "// Offline / Simulation Output:\n" + JSON.stringify({
-                    dossier_id: "DOSSIER-SIM-" + Math.floor(Math.random()*10000),
-                    system: "fasta-gc-calculator",
-                    domain: "Clinical & Cryptographic AI",
-                    task_id: payload.task_id,
-                    overall_urgency: payload.is_critical_flag ? "CRITICAL_STAT_PANIC" : "ELEVATED_RISK",
-                    integrity_status: "DISCORDANT_ANOMALY",
-                    alerts: [
-                        { worker: "InvariantQCWorker", alert: "Primary metric exceeds upper reference bound" },
-                        { worker: "SafetyEscalationWorker", alert: "Critical emergency interlock flag active" }
-                    ],
-                    audit_hash: "HMAC_SHA256_e83f9a72b941d6c381f9"
-                }, null, 2);
-            }
+<header><div class="wrap">
+  <h1>FASTA GC Calculator</h1>
+  <p class="lede">DNA sequence composition, CpG frequency, N50, and GC distribution — calculated locally in your browser.</p>
+</div></header>
+<main class="wrap">
+  <div class="layout">
+    <section class="card" aria-labelledby="input-title">
+      <h2 id="input-title">Sequence input</h2>
+      <label for="fasta-file">Upload FASTA file</label>
+      <input id="fasta-file" type="file" accept=".fa,.fasta,.fna,.txt,text/plain">
+      <p class="hint">Plain-text FASTA, up to 20 MiB. Choosing a file takes precedence over pasted text.</p>
+      <label for="sequence-text">Or paste a FASTA record / DNA sequence</label>
+      <textarea id="sequence-text" spellcheck="false" placeholder=">seq1&#10;ATCGATCGNN&#10;>seq2&#10;ggccATAT"></textarea>
+      <div class="params">
+        <div><label for="window">GC window (bp)</label><input id="window" type="number" min="1" max="10000000" step="1" value="100"></div>
+        <div><label for="step">Step (bp)</label><input id="step" type="number" min="1" max="10000000" step="1" value="10"></div>
+      </div>
+      <div class="actions">
+        <button id="analyze" class="primary" type="button">Analyze sequences</button>
+        <button id="example" type="button">Load example</button>
+        <button id="clear" type="button">Clear</button>
+      </div>
+      <p id="error" role="alert" aria-live="polite"></p>
+      <p class="hint">No upload or server processing: sequence data stays in this tab. N and ambiguous bases are excluded from the GC denominator.</p>
+    </section>
+    <section class="card" aria-labelledby="summary-title">
+      <h2 id="summary-title">Assembly summary</h2>
+      <div class="stats" id="summary">
+        <div class="stat"><strong id="metric-gc">—</strong><span>GC content (%)</span></div>
+        <div class="stat"><strong id="metric-length">—</strong><span>Total bases (bp)</span></div>
+        <div class="stat"><strong id="metric-n50">—</strong><span>N50 (bp)</span></div>
+        <div class="stat"><strong id="metric-records">—</strong><span>Sequences</span></div>
+      </div>
+      <div class="note">GC% = (G + C) / (A + T + G + C) × 100. N50 is the contig length at which the cumulative assembly length reaches 50%.</div>
+    </section>
+  </div>
+  <div id="results" class="results" hidden>
+    <section class="card" aria-labelledby="records-title">
+      <h2 id="records-title">Per-sequence statistics</h2>
+      <div class="wide"><table>
+        <thead><tr><th>Sequence</th><th>Length</th><th>GC %</th><th>A</th><th>T</th><th>G</th><th>C</th><th>N</th><th>CpG</th><th>CpG O/E</th><th>Masked %</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table></div>
+      <div class="actions"><button id="export" type="button">Download CSV results</button></div>
+      <p class="hint">CpG O/E = observed CpG × canonical base count / (C × G); zero if C or G is absent. Masked % measures lowercase characters.</p>
+    </section>
+    <section class="card" aria-labelledby="window-title">
+      <h2 id="window-title">Sliding-window GC profile</h2>
+      <p class="muted" id="window-info"></p>
+      <svg class="plot" id="window-plot" role="img" aria-label="GC percentage across the longest sequence" viewBox="0 0 600 150" preserveAspectRatio="none"></svg>
+      <p class="hint">Up to 300 windows are displayed from the longest sequence. A window with no canonical DNA bases is shown as 0% GC.</p>
+    </section>
+  </div>
+</main>
+<footer><div class="wrap">Runs locally in your browser; no Python runtime or external libraries required. <a href="https://github.com/abusuraihsakhri/fasta-gc-calculator">Source code</a> · MIT License</div></footer>
+<script type="module">
+  import { parseFasta, analyzeRecords, slidingWindow, csvExport } from "./calculator.mjs";
+  const byId = id => document.getElementById(id);
+  const format = value => Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  let previousStats = [];
+  const fields = ["header", "length", "gcPercent", "A", "T", "G", "C", "N", "cpg", "cpgOE", "maskedPercent"];
+  const clearResults = () => {
+    byId("results").hidden = true;
+    previousStats = [];
+    ["gc", "length", "n50", "records"].forEach(id => byId("metric-" + id).textContent = "—");
+    byId("rows").replaceChildren();
+    byId("window-plot").replaceChildren();
+  };
+  byId("example").addEventListener("click", () => {
+    byId("fasta-file").value = "";
+    byId("sequence-text").value = ">example_1\nATCGATCGNNGGCC\n>example_2\nggccttaaCGCG";
+    byId("error").textContent = "";
+  });
+  byId("clear").addEventListener("click", () => {
+    byId("fasta-file").value = "";
+    byId("sequence-text").value = "";
+    byId("error").textContent = "";
+    clearResults();
+  });
+  byId("analyze").addEventListener("click", async () => {
+    const btn = byId("analyze");
+    btn.disabled = true;
+    byId("error").textContent = "";
+    clearResults();
+    try {
+      const file = byId("fasta-file").files[0];
+      if (file && file.size > 20 * 1024 * 1024) throw Error("File exceeds the 20 MiB limit.");
+      const input = file ? await file.text() : byId("sequence-text").value;
+      const records = parseFasta(input);
+      if (!records.length) throw Error("Enter a DNA sequence or select a FASTA file.");
+      const windowSize = Number(byId("window").value);
+      const step = Number(byId("step").value);
+      if (!Number.isSafeInteger(windowSize) || !Number.isSafeInteger(step) || windowSize <= 0 || step <= 0) {
+        throw Error("Window size and step must be positive integers.");
+      }
+      const result = analyzeRecords(records);
+      previousStats = result.stats;
+      byId("metric-gc").textContent = format(result.assembly.gcPercent) + "%";
+      byId("metric-length").textContent = format(result.assembly.length);
+      byId("metric-n50").textContent = format(result.assembly.n50);
+      byId("metric-records").textContent = format(result.assembly.records);
+      const tbody = byId("rows");
+      for (const stat of result.stats) {
+        const tr = document.createElement("tr");
+        for (const key of fields) {
+          const td = document.createElement("td");
+          td.textContent = typeof stat[key] === "number" ? format(stat[key]) : stat[key];
+          if (key === "header") td.title = stat[key];
+          tr.appendChild(td);
         }
-    </script>
+        tbody.appendChild(tr);
+      }
+      const longest = records.reduce((best, current) => current.sequence.length > best.sequence.length ? current : best, records[0]);
+      const windows = slidingWindow(longest.sequence, windowSize, step, 300);
+      byId("window-info").textContent = windows.length ? "Sequence: " + longest.header + " · " + windows.length + " windows" : "No full windows fit this sequence.";
+      const svg = byId("window-plot");
+      if (windows.length) {
+        const ns = "http://www.w3.org/2000/svg";
+        const poly = document.createElementNS(ns, "polyline");
+        const coords = windows.map((w, i) => {
+          const x = windows.length === 1 ? 300 : 20 + i * 560 / (windows.length - 1);
+          return x.toFixed(1) + "," + (135 - 1.2 * w.gcPercent).toFixed(1);
+        }).join(" ");
+        poly.setAttribute("points", coords);
+        poly.setAttribute("fill", "none");
+        poly.setAttribute("stroke", "#6fcdbd");
+        poly.setAttribute("stroke-width", "2.5");
+        poly.setAttribute("stroke-linejoin", "round");
+        svg.appendChild(poly);
+      }
+      byId("results").hidden = false;
+    } catch (error) {
+      byId("error").textContent = error instanceof Error ? error.message : String(error);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  byId("export").addEventListener("click", () => {
+    if (!previousStats.length) return;
+    const blob = new Blob([csvExport(previousStats)], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "fasta-gc-results.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+</script>
 </body>
 </html>
